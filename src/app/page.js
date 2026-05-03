@@ -2,22 +2,22 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function AssessmentForm() {
     const [step, setStep] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [aiResult, setAiResult] = useState("");
     const [formData, setFormData] = useState({
-        access_key: "e4d88a8c-2205-425b-b40b-c19adf7cfad1", // Your Web3Forms Key
+        access_key: process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY,
         subject: "New Child Assessment Submission",
-        // Step 1: Personal
         childName: "", age: "", sex: "", diagnosis: "", positionInFamily: "",
         schoolAttended: "", class: "", parentName: "", phone: "", homeAddress: "", officeAddress: "",
-        // Step 2: Referral & Birth
         expectations: "", gestation: "", deliveryType: "", criesAtBirth: "", birthWeight: "",
         neckControl: "", sitting: "", crawling: "", walking: "", languageDev: "",
-        // Step 3: Medical & Behavioral
         hearingTest: "", onMedication: "", medicationDetails: "", seizures: "",
         hurtfulToSelf: "", hurtfulToOthers: "",
-        // Step 4: Sensory Profile (Selection-based)
         tactileSensitivity: "", tasteSmellSensitivity: "", movementSensitivity: "",
         underresponsiveSeeking: "", auditoryFiltering: "", energyLevel: "", visualAuditory: "",
     });
@@ -32,14 +32,33 @@ export default function AssessmentForm() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const response = await fetch("https://api.web3forms.com/submit", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify(formData),
-        });
-        const result = await response.json();
-        if (result.success) {
-            alert("Assessment Submitted Successfully!");
+        setLoading(true);
+
+        try {
+            await fetch("https://api.web3forms.com/submit", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Accept: "application/json" },
+                body: JSON.stringify(formData),
+            });
+
+            const geminiResponse = await fetch("/api/generate-program", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
+
+            const result = await geminiResponse.json();
+            if (result.output) {
+                setAiResult(result.output);
+                setStep(6);
+            } else {
+                alert("Assessment saved, but program generation failed.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("An error occurred during submission.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -53,7 +72,6 @@ export default function AssessmentForm() {
     return (
         <div className="min-h-screen bg-slate-50 py-12 px-4">
             <div className="max-w-3xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200">
-
                 <div className="bg-blue-600 p-8 text-center text-white">
                     <h1 className="text-2xl font-black mb-1">EL-OLAM SPECIAL HOME AND REHABILITATION CENTRE</h1>
                     <p className="text-blue-100 text-sm font-black tracking-widest">CAC/IT NO: 156872</p>
@@ -65,7 +83,6 @@ export default function AssessmentForm() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-8">
-
                     {step === 1 && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
                             <SectionHeader title="1.0 Basic Information" subtitle="Child and Guardian Details" />
@@ -146,29 +163,46 @@ export default function AssessmentForm() {
                             <Select label="Auditory Filtering" name="auditoryFiltering" options={["Typical", "Probable Difference", "Definite Difference"]} value={formData.auditoryFiltering} onChange={handleChange} />
                             <Select label="Low Energy / Weak" name="energyLevel" options={["Typical", "Probable Difference", "Definite Difference"]} value={formData.energyLevel} onChange={handleChange} />
                             <Select label="Visual/Auditory Sensitivity" name="visualAuditory" options={["Typical", "Probable Difference", "Definite Difference"]} value={formData.visualAuditory} onChange={handleChange} />
-
                             <div className="mt-8 p-6 bg-blue-900 rounded-xl text-white">
                                 <p className="text-center font-black italic uppercase tracking-tight">"I hereby attest to the accuracy of the information obtained in this application."</p>
                             </div>
                         </div>
                     )}
 
-                    <div className="mt-10 flex justify-between gap-4">
-                        {step > 1 && (
-                            <button type="button" onClick={prevStep} className="flex-1 py-3 px-6 rounded-xl border-2 border-blue-600 text-blue-600 font-black hover:bg-blue-50 transition-colors">
-                                ← BACK
+                    {step === 6 && (
+                        <div className="space-y-6 animate-in fade-in zoom-in duration-700">
+                            <SectionHeader title="Generated Therapy Program" subtitle="AI-Assisted Assessment Result" />
+                            <div className="bg-slate-50 p-6 rounded-xl border-2 border-dashed border-blue-200 prose prose-blue max-w-none shadow-inner">
+                                <div className="text-blue-900">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                        {aiResult}
+                                    </ReactMarkdown>
+                                </div>
+                            </div>
+                            <button type="button" onClick={() => window.location.reload()} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg">
+                                START NEW ASSESSMENT
                             </button>
-                        )}
-                        {step < 5 ? (
-                            <button type="button" onClick={nextStep} className="flex-1 py-3 px-6 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all">
-                                NEXT STEP →
-                            </button>
-                        ) : (
-                            <button type="submit" className="flex-1 py-3 px-6 rounded-xl bg-green-600 text-white font-black hover:bg-green-700 shadow-lg shadow-green-200 transition-all">
-                                SUBMIT ASSESSMENT ✓
-                            </button>
-                        )}
-                    </div>
+                        </div>
+                    )}
+
+                    {step <= 5 && (
+                        <div className="mt-10 flex justify-between gap-4">
+                            {step > 1 && (
+                                <button type="button" onClick={prevStep} className="flex-1 py-3 px-6 rounded-xl border-2 border-blue-600 text-blue-600 font-black hover:bg-blue-50 transition-colors">
+                                    ← BACK
+                                </button>
+                            )}
+                            {step < 5 ? (
+                                <button type="button" onClick={nextStep} className="flex-1 py-3 px-6 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all">
+                                    NEXT STEP →
+                                </button>
+                            ) : (
+                                <button type="submit" disabled={loading} className="flex-1 py-3 px-6 rounded-xl bg-green-600 text-white font-black hover:bg-green-700 shadow-lg shadow-green-200 transition-all disabled:opacity-50">
+                                    {loading ? "GENERATING PROGRAM..." : "SUBMIT ASSESSMENT ✓"}
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </form>
 
                 <div className="p-6 bg-slate-100 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -187,10 +221,7 @@ function Input({ label, ...props }) {
     return (
         <div className="flex flex-col gap-1">
             <label className="text-xs font-black text-slate-500 uppercase ml-1">{label}</label>
-            <input
-                className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-600 outline-none transition-all text-black font-black placeholder:text-slate-600 placeholder:font-black bg-white"
-                {...props}
-            />
+            <input className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-600 outline-none transition-all text-black font-black placeholder:text-slate-600 placeholder:font-black bg-white" {...props} />
         </div>
     );
 }
@@ -199,11 +230,7 @@ function TextArea({ label, ...props }) {
     return (
         <div className="flex flex-col gap-1">
             <label className="text-xs font-black text-slate-500 uppercase ml-1">{label}</label>
-            <textarea
-                rows={3}
-                className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-600 outline-none transition-all text-black font-black placeholder:text-slate-600 placeholder:font-black bg-white"
-                {...props}
-            />
+            <textarea rows={3} className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-600 outline-none transition-all text-black font-black placeholder:text-slate-600 placeholder:font-black bg-white" {...props} />
         </div>
     );
 }
@@ -212,10 +239,7 @@ function Select({ label, options, ...props }) {
     return (
         <div className="flex flex-col gap-1">
             <label className="text-xs font-black text-slate-500 uppercase ml-1">{label}</label>
-            <select
-                className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-600 outline-none transition-all text-black font-black"
-                {...props}
-            >
+            <select className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-600 outline-none transition-all text-black font-black" {...props}>
                 <option value="" className="text-slate-400">SELECT OPTION</option>
                 {options.map((opt) => (
                     <option key={opt} value={opt} className="text-black font-black uppercase">{opt}</option>
