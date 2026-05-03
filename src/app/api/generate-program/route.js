@@ -1,11 +1,10 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// app/api/generate-program/route.js
+import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
     try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
+        const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
         const body = await req.json();
 
         const prompt = `
@@ -13,14 +12,14 @@ export async function POST(req) {
             We have a multidisciplinary team: Occupational Therapists (OT), Speech Therapists (ST), and Physiotherapists (PT).
 
             CLIENT ASSESSMENT DATA:
-            ${JSON.stringify(body)}
+            ${JSON.stringify(body, null, 2)}
 
             TASK:
             Generate a Professional 3-Year Strategic Rehabilitation Plan.
             
             STRUCTURE:
             1. **Case Summary**: Brief clinical overview.
-            2. **3-Year Ultimate Target**: Define the primary goal we aim to achieve for this child by the end of 3 years (e.g., Functional Independence, School Readiness, or Enhanced Communication).
+            2. **3-Year Ultimate Target**: Define the primary goal we aim to achieve for this child by the end of 3 years.
             
             3. **Phased Roadmap**:
                - **Year 1 (Foundation)**: Focus on immediate sensory regulation and basic motor/communication skills.
@@ -32,15 +31,20 @@ export async function POST(req) {
                - **Physiotherapy Focus**: Gross motor and physical milestones.
                - **Speech & Communication Focus**: Expressive and receptive language.
 
-            TONE: 
-            Professional, clinical, and goal-oriented.
+            TONE: Professional, clinical, and goal-oriented.
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
+        const message = await client.messages.create({
+            model: "claude-opus-4-5",
+            max_tokens: 2000,
+            messages: [{ role: "user", content: prompt }],
+        });
 
-        return NextResponse.json({ output: response.text() });
+        const output = message.content[0].text;
+        return NextResponse.json({ output });
+
     } catch (error) {
+        console.error("Generation error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
