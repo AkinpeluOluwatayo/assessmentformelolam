@@ -35,28 +35,36 @@ export default function AssessmentForm() {
         setLoading(true);
 
         try {
-            await fetch("https://api.web3forms.com/submit", {
+            // Step 1: Save to Web3Forms
+            const web3Res = await fetch("https://api.web3forms.com/submit", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Accept: "application/json" },
                 body: JSON.stringify(formData),
             });
+            const web3Data = await web3Res.json();
+            if (!web3Data.success) {
+                console.error("Web3Forms failed:", web3Data);
+            }
 
-            const geminiResponse = await fetch("/api/generate-program", {
+            // Step 2: Generate AI program
+            const aiResponse = await fetch("/api/generate-program", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData),
             });
 
-            const result = await geminiResponse.json();
+            const result = await aiResponse.json();
+
             if (result.output) {
                 setAiResult(result.output);
                 setStep(6);
             } else {
-                alert("Assessment saved, but program generation failed.");
+                // Show the actual error so you know what's wrong
+                alert("Program generation failed: " + (result.error || "Unknown error"));
             }
         } catch (error) {
             console.error(error);
-            alert("An error occurred during submission.");
+            alert("An error occurred: " + error.message);
         } finally {
             setLoading(false);
         }
