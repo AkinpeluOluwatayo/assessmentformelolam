@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
+export const maxDuration = 30; // ← Add this - extends Vercel timeout to 30s
+
 export async function POST(req) {
     try {
         const apiKey = process.env.GEMINI_API_KEY;
@@ -9,15 +11,18 @@ export async function POST(req) {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
         const body = await req.json();
+
+        // Strip access_key and subject before sending to AI
+        const { access_key, subject, ...assessmentData } = body;
 
         const prompt = `
             You are the Clinical Director at El-Olam Special Home and Rehabilitation Centre.
             We have a multidisciplinary team: Occupational Therapists (OT), Speech Therapists (ST), and Physiotherapists (PT).
 
             CLIENT ASSESSMENT DATA:
-            ${JSON.stringify(body, null, 2)}
+            ${JSON.stringify(assessmentData, null, 2)}
 
             TASK: Generate a Professional 3-Year Strategic Rehabilitation Plan.
             
@@ -27,13 +32,13 @@ export async function POST(req) {
             3. **Phased Roadmap**:
                - **Year 1 (Foundation)**: Sensory regulation and basic motor/communication skills.
                - **Year 2 (Development)**: Complex task execution and social interaction.
-               - **Year 3 (Integration)**: Autonomy, academic/vocational readiness, long-term maintenance.
+               - **Year 3 (Integration)**: Autonomy, academic readiness, long-term maintenance.
             4. **Specialist Directives**:
-               - **Occupational Therapy Focus**: Sensory and fine motor.
-               - **Physiotherapy Focus**: Gross motor and physical milestones.
-               - **Speech & Communication Focus**: Expressive and receptive language.
+               - **Occupational Therapy**: Sensory and fine motor goals.
+               - **Physiotherapy**: Gross motor and physical milestones.
+               - **Speech & Communication**: Expressive and receptive language goals.
 
-            TONE: Professional, clinical, and goal-oriented.
+            TONE: Professional, clinical, and goal-oriented. Keep it concise.
         `;
 
         const result = await model.generateContent(prompt);
@@ -41,7 +46,7 @@ export async function POST(req) {
         return NextResponse.json({ output: response.text() });
 
     } catch (error) {
-        console.error("Generation error:", error);
+        console.error("Generation error:", error.message);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
