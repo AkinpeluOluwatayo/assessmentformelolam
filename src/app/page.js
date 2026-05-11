@@ -2,13 +2,12 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { supabase } from "@/utils/supabase";
 
 export default function AssessmentForm() {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [aiResult, setAiResult] = useState("");
+    const [submitted, setSubmitted] = useState(false);
     const [formData, setFormData] = useState({
         access_key: process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY,
         subject: "New Child Assessment Submission",
@@ -46,25 +45,53 @@ export default function AssessmentForm() {
                 console.error("Web3Forms failed:", web3Data);
             }
 
-            // Step 2: Generate AI program
-            const aiResponse = await fetch("/api/generate-program", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
-            });
+            // Step 2: Save to Supabase
+            const { error: supabaseError } = await supabase
+                .from("children")
+                .insert([
+                    {
+                        full_name: formData.childName,
+                        diagnosis: formData.diagnosis,
+                        position_in_family: formData.positionInFamily,
+                        expectations_goals: formData.expectations,
+                        gestation_period: formData.gestation,
+                        delivery_type: formData.deliveryType,
+                        cries_at_birth: formData.criesAtBirth,
+                        birth_weight: formData.birthWeight,
+                        milestones: {
+                            neckControl: formData.neckControl,
+                            sitting: formData.sitting,
+                            crawling: formData.crawling,
+                            walking: formData.walking,
+                            languageDev: formData.languageDev,
+                        },
+                        hearing_test_conducted: formData.hearingTest,
+                        seizures_frequency: formData.seizures,
+                        behavioral_issues: {
+                            hurtfulToSelf: formData.hurtfulToSelf,
+                            hurtfulToOthers: formData.hurtfulToOthers,
+                        },
+                        sensory_profile: {
+                            tactileSensitivity: formData.tactileSensitivity,
+                            tasteSmellSensitivity: formData.tasteSmellSensitivity,
+                            movementSensitivity: formData.movementSensitivity,
+                            underresponsiveSeeking: formData.underresponsiveSeeking,
+                            auditoryFiltering: formData.auditoryFiltering,
+                            energyLevel: formData.energyLevel,
+                            visualAuditory: formData.visualAuditory,
+                        },
+                    },
+                ]);
 
-            const result = await aiResponse.json();
-
-            if (result.output) {
-                setAiResult(result.output);
-                setStep(6);
-            } else {
-                // Show the actual error so you know what's wrong
-                alert("Program generation failed: " + (result.error || "Unknown error"));
+            if (supabaseError) {
+                throw supabaseError;
             }
+
+            setSubmitted(true);
+            alert("Assessment submitted successfully!");
         } catch (error) {
             console.error(error);
-            alert("An error occurred: " + error.message);
+            alert("An error occurred during submission: " + error.message);
         } finally {
             setLoading(false);
         }
@@ -177,15 +204,13 @@ export default function AssessmentForm() {
                         </div>
                     )}
 
-                    {step === 6 && (
-                        <div className="space-y-6 animate-in fade-in zoom-in duration-700">
-                            <SectionHeader title="Generated Therapy Program" subtitle="AI-Assisted Assessment Result" />
-                            <div className="bg-slate-50 p-6 rounded-xl border-2 border-dashed border-blue-200 prose prose-blue max-w-none shadow-inner">
-                                <div className="text-blue-900">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                        {aiResult}
-                                    </ReactMarkdown>
-                                </div>
+                    {submitted && (
+                        <div className="space-y-6 animate-in fade-in zoom-in duration-700 text-center py-12">
+                            <SectionHeader title="Submission Successful" subtitle="Thank you for the assessment" />
+                            <div className="bg-green-50 p-6 rounded-xl border-2 border-dashed border-green-200">
+                                <p className="text-green-900 font-bold">
+                                    The assessment data has been recorded in our system.
+                                </p>
                             </div>
                             <button type="button" onClick={() => window.location.reload()} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg">
                                 START NEW ASSESSMENT
@@ -193,7 +218,7 @@ export default function AssessmentForm() {
                         </div>
                     )}
 
-                    {step <= 5 && (
+                    {step <= 5 && !submitted && (
                         <div className="mt-10 flex justify-between gap-4">
                             {step > 1 && (
                                 <button type="button" onClick={prevStep} className="flex-1 py-3 px-6 rounded-xl border-2 border-blue-600 text-blue-600 font-black hover:bg-blue-50 transition-colors">
@@ -206,7 +231,7 @@ export default function AssessmentForm() {
                                 </button>
                             ) : (
                                 <button type="submit" disabled={loading} className="flex-1 py-3 px-6 rounded-xl bg-green-600 text-white font-black hover:bg-green-700 shadow-lg shadow-green-200 transition-all disabled:opacity-50">
-                                    {loading ? "GENERATING PROGRAM..." : "SUBMIT ASSESSMENT ✓"}
+                                    {loading ? "SUBMITTING..." : "SUBMIT ASSESSMENT ✓"}
                                 </button>
                             )}
                         </div>

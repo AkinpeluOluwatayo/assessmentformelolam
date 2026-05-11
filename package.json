@@ -8,17 +8,13 @@
     "start": "next start"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.92.0",
-    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.105.4",
     "next": "16.2.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@tailwindcss/typography": "^0.5.19",
     "babel-plugin-react-compiler": "1.0.0",
     "tailwindcss": "^4"
   }
