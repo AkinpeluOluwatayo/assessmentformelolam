@@ -8,6 +8,12 @@ export default function AssessmentForm() {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [toast, setToast] = useState(null);
+
+    const showToast = (message, type = "error") => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+    };
     const [formData, setFormData] = useState({
         access_key: process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY,
         subject: "New Child Assessment Submission",
@@ -90,7 +96,7 @@ export default function AssessmentForm() {
             setSubmitted(true);
         } catch (error) {
             console.error(error);
-            alert("Submission failed: " + error.message);
+            showToast("Submission failed: " + error.message, "error");
         } finally {
             setLoading(false);
         }
@@ -105,6 +111,14 @@ export default function AssessmentForm() {
 
     return (
         <div className="min-h-screen bg-slate-50 py-12 px-4">
+            {toast && (
+                <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-white font-black text-sm max-w-sm animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === "error" ? "bg-red-600" : "bg-green-600"
+                    }`}>
+                    <span>{toast.type === "error" ? "✕" : "✓"}</span>
+                    <span>{toast.message}</span>
+                    <button onClick={() => setToast(null)} className="ml-auto opacity-70 hover:opacity-100 text-lg leading-none">&times;</button>
+                </div>
+            )}
             <div className="max-w-3xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200">
                 <div className="bg-blue-600 p-8 text-center text-white">
                     <h1 className="text-2xl font-black mb-1">EL-OLAM SPECIAL HOME AND REHABILITATION CENTRE</h1>
@@ -119,6 +133,7 @@ export default function AssessmentForm() {
                 <form onSubmit={handleSubmit} className="p-8">
                     {step === 1 && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                            <h2 className="text-2xl font-black text-center text-blue-900 uppercase tracking-tight mb-2">Assessment Form</h2>
                             <SectionHeader title="1.0 Basic Information" subtitle="Child and Guardian Details" />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <Input label="Child's Name" name="childName" placeholder="ENTER CHILD'S NAME" value={formData.childName} onChange={handleChange} />
