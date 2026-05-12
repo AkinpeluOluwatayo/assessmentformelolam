@@ -88,10 +88,9 @@ export default function AssessmentForm() {
             }
 
             setSubmitted(true);
-            alert("Assessment submitted successfully!");
         } catch (error) {
             console.error(error);
-            alert("An error occurred during submission: " + error.message);
+            alert("Submission failed: " + error.message);
         } finally {
             setLoading(false);
         }
@@ -186,7 +185,7 @@ export default function AssessmentForm() {
                             <Select label="Taste/Smell Sensitivity" name="tasteSmellSensitivity" options={["Typical", "Probable Difference", "Definite Difference"]} value={formData.tasteSmellSensitivity} onChange={handleChange} />
                             <Select label="Movement Sensitivity" name="movementSensitivity" options={["Typical", "Probable Difference", "Definite Difference"]} value={formData.movementSensitivity} onChange={handleChange} />
                             <div className="p-4 bg-amber-50 border border-amber-100 rounded-md text-amber-800 text-sm font-bold italic">
-                                Note: These observations help our AI generate the most accurate therapy program for your facility.
+                                Note: These observations help our specialists design the most accurate therapy program for your child.
                             </div>
                         </div>
                     )}
